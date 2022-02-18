@@ -1,9 +1,7 @@
-
 import 'dart:ui';
 import 'package:camera_google_ml_vision/camera_google_ml_vision.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
-
 
 void main() => runApp(MyApp());
 
@@ -100,10 +98,7 @@ class _ScanPageState extends State<ScanPage> {
             },
             detector: detector.detectInImage,
             onResult: (List<Barcode> barcodes) {
-              if (!mounted ||
-                  resultSent ||
-                  barcodes == null ||
-                  barcodes.isEmpty) {
+              if (!mounted || resultSent || barcodes.isEmpty) {
                 return;
               }
               resultSent = true;

@@ -1,8 +1,6 @@
-
 import 'package:camera_google_ml_vision/camera_google_ml_vision.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
-
 
 void main() => runApp(MyApp());
 
@@ -47,8 +45,7 @@ class _MyHomePageState extends State<MyHomePage> {
             detector: detector.detectInImage,
             resolution: ResolutionPreset.high,
             onResult: (barcodes) {
-              if (barcodes == null ||
-                  barcodes.isEmpty ||
+              if (barcodes.isEmpty ||
                   data.contains(barcodes.first.displayValue) ||
                   !mounted) {
                 return;

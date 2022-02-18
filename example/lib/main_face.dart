@@ -1,8 +1,6 @@
-import 'package:camera/camera.dart';
 import 'package:camera_google_ml_vision/camera_google_ml_vision.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
-
 
 void main() => runApp(MyApp());
 
@@ -33,7 +31,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final _scanKey = GlobalKey<CameraMlVisionState>();
   CameraLensDirection cameraLensDirection = CameraLensDirection.front;
   FaceDetector detector =
-  GoogleVision.instance.faceDetector(FaceDetectorOptions(
+      GoogleVision.instance.faceDetector(FaceDetectorOptions(
     enableTracking: true,
     mode: FaceDetectorMode.accurate,
   ));
@@ -52,12 +50,13 @@ class _MyHomePageState extends State<MyHomePage> {
           overlayBuilder: (c) {
             return CustomPaint(
               painter: FaceDetectorPainter(
-                  _scanKey.currentState!.cameraValue!.previewSize!.flipped, _faces,
+                  _scanKey.currentState!.cameraValue!.previewSize!.flipped,
+                  _faces,
                   reflection: cameraLensDirection == CameraLensDirection.front),
             );
           },
           onResult: (faces) {
-            if (faces == null || faces.isEmpty || !mounted) {
+            if (faces.isEmpty || !mounted) {
               return;
             }
             setState(() {

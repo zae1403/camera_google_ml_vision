@@ -1,10 +1,8 @@
 library camera_google_ml_vision;
 
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:collection/collection.dart';
@@ -17,7 +15,6 @@ import 'package:visibility_detector/visibility_detector.dart';
 export 'package:camera/camera.dart';
 
 part 'utils.dart';
-
 
 typedef HandleDetection<T> = Future<T> Function(GoogleVisionImage image);
 typedef ErrorWidgetBuilder = Widget Function(
