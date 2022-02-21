@@ -121,11 +121,15 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
       }
 
       if (silently) {
-        _isStreaming = false;
+        if (mounted)
+          setState(() {
+            _isStreaming = false;
+          });
       } else {
-        setState(() {
-          _isStreaming = false;
-        });
+        if (mounted)
+          setState(() {
+            _isStreaming = false;
+          });
       }
       completer.complete();
     });
@@ -168,7 +172,6 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
   Future<XFile> takePicture(String path) async {
     await _stop(true);
     final image = await _cameraController!.takePicture();
-    _start();
     return image;
   }
 
@@ -284,7 +287,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
   Widget build(BuildContext context) {
     if (_cameraMlVisionState == _CameraState.loading) {
       return widget.loadingBuilder == null
-          ? Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator.adaptive())
           : widget.loadingBuilder!(context);
     }
     if (_cameraMlVisionState == _CameraState.error) {
@@ -304,12 +307,12 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
         fit: StackFit.passthrough,
         children: [
           cameraPreview,
-          (cameraController?.value.isInitialized ?? false)
+          (_isStreaming && (cameraController?.value.isInitialized ?? false))
               ? AspectRatio(
                   aspectRatio: _isLandscape()
                       ? cameraController!.value.aspectRatio
                       : (1 / cameraController!.value.aspectRatio),
-                  child: widget.overlayBuilder!(context),
+                  child: widget.overlayBuilder?.call(context) ?? Container(),
                 )
               : Container(),
         ],
