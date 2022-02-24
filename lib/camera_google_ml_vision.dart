@@ -19,12 +19,15 @@ part 'utils.dart';
 typedef HandleDetection<T> = Future<T> Function(GoogleVisionImage image);
 typedef ErrorWidgetBuilder = Widget Function(
     BuildContext context, CameraError error);
+typedef HandlerError = void Function(CameraError error);
 
 enum CameraError {
   unknown,
   cantInitializeCamera,
   androidVersionNotSupported,
   noCameraAvailable,
+  functionNotSupported,
+  unableProcessImage,
 }
 
 enum _CameraState {
@@ -41,6 +44,7 @@ class CameraMlVision<T> extends StatefulWidget {
   final WidgetBuilder? overlayBuilder;
   final CameraLensDirection cameraLensDirection;
   final ResolutionPreset? resolution;
+  final HandlerError? onError;
   final Function? onDispose;
 
   CameraMlVision({
@@ -52,6 +56,7 @@ class CameraMlVision<T> extends StatefulWidget {
     this.overlayBuilder,
     this.cameraLensDirection = CameraLensDirection.back,
     this.resolution,
+    this.onError,
     this.onDispose,
   }) : super(key: key);
 
@@ -67,7 +72,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
   ImageRotation? _rotation;
   _CameraState _cameraMlVisionState = _CameraState.loading;
   CameraError _cameraError = CameraError.unknown;
-  bool _alreadyCheckingImage = false;
+  bool isBusy = false;
   bool _isStreaming = false;
   bool _isDeactivate = false;
 
@@ -109,6 +114,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
         });
       } on PlatformException catch (e) {
         debugPrint('$e');
+        widget.onError?.call(CameraError.functionNotSupported);
       }
     }
   }
@@ -117,7 +123,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
     final completer = Completer();
     scheduleMicrotask(() async {
       if (_cameraController?.value.isStreamingImages == true && mounted) {
-        await _cameraController!.stopImageStream().catchError((_) {});
+        await _cameraController?.stopImageStream().catchError((_) {});
       }
 
       if (silently) {
@@ -143,7 +149,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
   }
 
   void _start() {
-    _cameraController!.startImageStream(_processImage);
+    _cameraController?.startImageStream(_processImage);
     setState(() {
       _isStreaming = true;
     });
@@ -171,36 +177,44 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
 
   Future<XFile> takePicture(String path) async {
     await _stop(true);
-    final image = await _cameraController!.takePicture();
-    return image;
+    try {
+      final image = await _cameraController!.takePicture();
+      _start();
+      return image;
+    } on PlatformException catch (e) {
+      debugPrint('$e');
+      widget.onError?.call(CameraError.functionNotSupported);
+
+      rethrow;
+    }
   }
 
   Future<void> flash(FlashMode mode) async {
-    await _cameraController!.setFlashMode(mode);
+    await _cameraController?.setFlashMode(mode);
   }
 
   Future<void> focus(FocusMode mode) async {
-    await _cameraController!.setFocusMode(mode);
+    await _cameraController?.setFocusMode(mode);
   }
 
   Future<void> focusPoint(Offset point) async {
-    await _cameraController!.setFocusPoint(point);
+    await _cameraController?.setFocusPoint(point);
   }
 
   Future<void> zoom(double zoom) async {
-    await _cameraController!.setZoomLevel(zoom);
+    await _cameraController?.setZoomLevel(zoom);
   }
 
   Future<void> exposure(ExposureMode mode) async {
-    await _cameraController!.setExposureMode(mode);
+    await _cameraController?.setExposureMode(mode);
   }
 
   Future<void> exposureOffset(double offset) async {
-    await _cameraController!.setExposureOffset(offset);
+    await _cameraController?.setExposureOffset(offset);
   }
 
   Future<void> exposurePoint(Offset offset) async {
-    await _cameraController!.setExposurePoint(offset);
+    await _cameraController?.setExposurePoint(offset);
   }
 
   Future<void> _initialize() async {
@@ -214,6 +228,17 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
             _cameraMlVisionState = _CameraState.error;
             _cameraError = CameraError.androidVersionNotSupported;
           });
+          widget.onError?.call(CameraError.androidVersionNotSupported);
+        }
+
+        return;
+      } else if (androidInfo.version.sdkInt >= 31) {
+        if (mounted) {
+          setState(() {
+            _cameraMlVisionState = _CameraState.error;
+            _cameraError = CameraError.androidVersionNotSupported;
+          });
+          widget.onError?.call(CameraError.androidVersionNotSupported);
         }
         return;
       }
@@ -223,24 +248,28 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
     if (description == null) {
       _cameraMlVisionState = _CameraState.error;
       _cameraError = CameraError.noCameraAvailable;
+      widget.onError?.call(CameraError.noCameraAvailable);
 
       return;
     }
+
     if (_cameraController != null) {
       await _stop(true);
       await _cameraController?.dispose();
     }
+
     _cameraController = CameraController(
       description,
-      widget.resolution ?? ResolutionPreset.high,
+      widget.resolution ?? ResolutionPreset.low,
       enableAudio: false,
     );
+
     if (!mounted) {
       return;
     }
 
     try {
-      await _cameraController!.initialize();
+      await _cameraController?.initialize();
     } catch (ex, stack) {
       debugPrint('Can\'t initialize camera');
       debugPrint('$ex, $stack');
@@ -249,6 +278,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
           _cameraMlVisionState = _CameraState.error;
           _cameraError = CameraError.cantInitializeCamera;
         });
+        widget.onError?.call(CameraError.cantInitializeCamera);
       }
       return;
     }
@@ -259,10 +289,10 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
 
     setState(() {
       _cameraMlVisionState = _CameraState.ready;
+      _rotation = _rotationIntToImageRotation(
+        description.sensorOrientation,
+      );
     });
-    _rotation = _rotationIntToImageRotation(
-      description.sensorOrientation,
-    );
 
     //FIXME hacky technique to avoid having black screen on some android devices
     await Future.delayed(Duration(milliseconds: 200));
@@ -272,7 +302,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
   @override
   void dispose() {
     if (widget.onDispose != null) {
-      widget.onDispose!();
+      widget.onDispose?.call();
     }
     if (_cameraController != null) {
       _stop(true).then((value) {
@@ -307,7 +337,7 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
         fit: StackFit.passthrough,
         children: [
           cameraPreview,
-          (_isStreaming && (cameraController?.value.isInitialized ?? false))
+          (cameraController?.value.isInitialized ?? false)
               ? AspectRatio(
                   aspectRatio: _isLandscape()
                       ? cameraController!.value.aspectRatio
@@ -348,16 +378,26 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
   }
 
   void _processImage(CameraImage cameraImage) async {
-    if (!_alreadyCheckingImage && mounted) {
-      _alreadyCheckingImage = true;
-      try {
-        final results =
-            await _detect<T>(cameraImage, widget.detector, _rotation!);
-        widget.onResult(results);
-      } catch (ex, stack) {
-        debugPrint('$ex, $stack');
-      }
-      _alreadyCheckingImage = false;
+    if (isBusy) {
+      return;
+    }
+
+    isBusy = true;
+    try {
+      final results =
+          await _detect<T>(cameraImage, widget.detector, _rotation!);
+      widget.onResult(results);
+    } catch (ex, stack) {
+      debugPrint('$ex, $stack');
+
+      _cameraMlVisionState = _CameraState.error;
+      _cameraError = CameraError.unableProcessImage;
+
+      widget.onError?.call(CameraError.unableProcessImage);
+    }
+    isBusy = false;
+    if (mounted) {
+      setState(() {});
     }
   }
 
