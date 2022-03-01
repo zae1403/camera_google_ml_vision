@@ -1,9 +1,10 @@
 import 'dart:ui';
 import 'package:camera_google_ml_vision/camera_google_ml_vision.dart';
 import 'package:flutter/material.dart';
-import 'package:google_ml_vision/google_ml_vision.dart';
+import 'package:google_ml_kit/google_ml_kit.dart';
+import 'main_face.dart' as f;
 
-void main() => runApp(MyApp());
+void main() => runApp(f.MyApp());
 
 class MyApp extends StatelessWidget {
   @override
@@ -54,7 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
               }
 
               setState(() {
-                data.add(barcode.displayValue.toString());
+                data.add(barcode.value.toString());
               });
             },
             child: Text('Scan product'),
@@ -77,7 +78,7 @@ class ScanPage extends StatefulWidget {
 
 class _ScanPageState extends State<ScanPage> {
   bool resultSent = false;
-  BarcodeDetector detector = GoogleVision.instance.barcodeDetector();
+  BarcodeScanner detector = GoogleMlKit.vision.barcodeScanner();
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +97,7 @@ class _ScanPageState extends State<ScanPage> {
                 ),
               );
             },
-            detector: detector.detectInImage,
+            detector: detector.processImage,
             onResult: (List<Barcode> barcodes) {
               if (!mounted || resultSent || barcodes.isEmpty) {
                 return;
