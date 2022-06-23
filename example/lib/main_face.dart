@@ -1,6 +1,5 @@
 import 'package:camera_google_ml_vision/camera_google_ml_vision.dart';
 import 'package:flutter/material.dart';
-import 'package:google_ml_kit/google_ml_kit.dart';
 
 void main() => runApp(MyApp());
 
@@ -32,7 +31,7 @@ class _MyHomePageState extends State<MyHomePage> {
   CameraLensDirection cameraLensDirection = CameraLensDirection.front;
   FaceDetector detector = GoogleMlKit.vision.faceDetector(FaceDetectorOptions(
     enableTracking: true,
-    mode: FaceDetectorMode.accurate,
+    performanceMode: FaceDetectorMode.accurate,
   ));
 
   @override
