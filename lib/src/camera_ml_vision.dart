@@ -228,17 +228,6 @@ class CameraMlVisionState<T> extends State<CameraMlVision<T>>
           });
           widget.onError?.call(CameraError.androidVersionNotSupported);
         }
-
-        return;
-      } else if (androidInfo.version.sdkInt! >= 31) {
-        if (mounted) {
-          setState(() {
-            _cameraMlVisionState = _CameraState.error;
-            _cameraError = CameraError.androidVersionNotSupported;
-          });
-          widget.onError?.call(CameraError.androidVersionNotSupported);
-        }
-        return;
       }
     }
 
